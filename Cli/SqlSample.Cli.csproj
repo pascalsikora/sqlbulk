@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="SqlTableDependency" Version="8.5.8" />
   </ItemGroup>
 
 </Project>

@@ -1,27 +1,29 @@
-﻿// See https://aka.ms/new-console-template for more information
-using System.Data;
+﻿using System.Reflection;
 using Microsoft.Data.SqlClient;
 
-Console.WriteLine("Hello, World!");
-var connectionString = "Server=.;Database=test1;User Id=sa;Password=sa;Trusted_Connection=True;";
+var connectionString = "Server=172.16.16.40\\SQL2019;Database=bulktest;User Id=bulk;Password=bulk;";
 SqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
-connectionStringBuilder.TrustServerCertificate = true;
 
-var dataTable = new DataTable();
-dataTable.Columns.Add("id",typeof(int));
-dataTable.Columns.Add("number",typeof(int));
-Random rnd = new Random();
-for (int i = 0; i < 100000; i++)
+var actionName = $"{Environment.GetCommandLineArgs()[1]}Action";
+Console.WriteLine($"ActionName: {actionName} - Try to run()");
+
+try
 {
-    var dataRow = dataTable.NewRow();
-    dataRow["id"] = i;
-    dataRow["number"] = i*rnd.Next(0,i);
-    dataTable.Rows.Add(dataRow);
-}
+    var actionType = Assembly.GetExecutingAssembly().GetType(actionName);
 
-using SqlBulkCopy bulkCopy = new SqlBulkCopy(connectionStringBuilder.ToString(),SqlBulkCopyOptions.FireTriggers);
-bulkCopy.SqlRowsCopied+= (sender,args) => Console.WriteLine($"Row: {args.RowsCopied}");
-bulkCopy.NotifyAfter = 1000;
-bulkCopy.BatchSize = 1000;
-bulkCopy.DestinationTableName = "bulktest";
-bulkCopy.WriteToServer(dataTable);
+    if (actionType == null)
+    {
+        Console.WriteLine($"Action '{actionName}' not found.");
+
+        return;
+    }
+
+    var action = (IAction)Activator.CreateInstance(actionType);
+    var result = await action.Run(connectionStringBuilder);
+
+    Console.WriteLine($"Action '{actionName}' executed with result: {result}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error executing action: {ex.Message}");
+}
